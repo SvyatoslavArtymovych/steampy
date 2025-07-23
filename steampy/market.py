@@ -160,6 +160,15 @@ class SteamMarket:
 
         return response
 
+    def _confirm_buy_listing(self) -> dict:
+        con_executor = ConfirmationExecutor(
+            self._steam_guard['identity_secret'], self._steam_guard['steamid'], self._session
+        )
+        confirmations = con_executor._get_confirmations()
+        for confirmation in confirmations:
+            con_executor._send_confirmation(confirmation)
+        return {'success': True, 'message': 'All pending confirmations have been accepted.'}
+
     @login_required
     def buy_item(
         self,
