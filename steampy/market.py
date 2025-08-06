@@ -196,30 +196,24 @@ class SteamMarket:
         response = self._session.post(
             f'{SteamUrl.COMMUNITY_URL}/market/buylisting/{market_id}', data, headers=headers,
         ).json()
+        if response is None:
+            raise ApiException(f'There was a problem buying this item. Message: api response is None')
+        try:
+            if response.get('need_confirmation'):
+                confirmation_id = response.get('confirmation',{}).get('confirmation_id')
+                confirmation_executor = ConfirmationExecutor(
+                    self._steam_guard['identity_secret'], self._steam_guard['steamid'], self._session
+                )
+                var = confirmation_executor.send_buy_allow_request(confirmation_id)
+                return var
+            if (success := response['wallet_info']['success']) != 1:
+                raise ApiException(
+                    f'There was a problem buying this item. Are you using the right currency? success: {success}'
+                )
+        except Exception:
+            raise ApiException(f'There was a problem buying this item. Message: {response.get("message")}')
 
-        if response.get('wallet_info') and response.get('wallet_info').get('success') == 1:
-            return response
-
-        if response.get('success') == 22 and response.get('confirmation', {}).get('confirmation_id'):
-            try:
-                confirmation_id = response['confirmation']['confirmation_id']
-                data['confirmation'] = confirmation_id
-                self._confirm_buy_listing()
-                time.sleep(1)
-
-                final_response = self._session.post(
-                    f'{SteamUrl.COMMUNITY_URL}/market/buylisting/{market_id}', data=data, headers=headers
-                ).json()
-                return final_response
-            except (KeyError, TypeError):
-                raise ApiException('Steam requested confirmation, but returned invalid data (confirmation_id).')
-            except Exception as e:
-                raise ApiException(f'An error occurred during the second confirmation step: {e}')
-
-        message = response.get('message')
-        if not message and response.get('wallet_info'):
-            message = response['wallet_info'].get('message')
-        raise ApiException(f'Failed to buy item. Steam message: {message}')
+        return response
 
 
     @login_required
