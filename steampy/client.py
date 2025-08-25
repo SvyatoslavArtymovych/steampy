@@ -77,6 +77,7 @@ class SteamClient:
         self.was_login_executed = True
         if self.steam_guard is None:
             self.steam_guard = {'steamid': str(self.get_steam_id())}
+            self.steam_guard["steamid"] = str(self.get_steam_id())
         self.market._set_login_executed(self.steam_guard, self._get_session_id())
 
     @login_required
@@ -108,6 +109,7 @@ class SteamClient:
         self._session.cookies.set('steamRememberLogin', 'true')
         LoginExecutor(self.username, self._password, self.steam_guard['shared_secret'], self._session).login()
         self.was_login_executed = True
+        self.steam_guard['steamid'] = str(self.get_steam_id())
         self.market._set_login_executed(self.steam_guard, self._get_session_id())
         self._access_token = self._set_access_token()
 
